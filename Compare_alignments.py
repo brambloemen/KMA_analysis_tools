@@ -9,7 +9,7 @@ import sys
 
 logging.basicConfig(level = logging.DEBUG,format='%(asctime)s %(message)s',
                     datefmt='%x %X')
-parser = argparse.ArgumentParser(description='Retrieve alignments from alignment file 1 in alignment file 2 \nPrint results to standard output')
+parser = argparse.ArgumentParser(description='Retrieve alignments from alignment file 1 in alignment file 2; \nPrint results to standard output')
 parser.add_argument("bam1", metavar="--input_1.bam", type=str, help="Filepath of bam alignment 1")
 # make fastq input optional
 parser.add_argument("bam2", metavar="--input_2.bam", type=str, help="Filepath of bam alignment 2")
