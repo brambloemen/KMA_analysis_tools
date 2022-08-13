@@ -2,6 +2,7 @@ library(dplyr)
 library(stringr)
 library(ggplot2)
 library(data.table)
+library(optparse)
 
 # Process input arguments
 option_list = list(
