@@ -107,6 +107,7 @@ clean_org_name <- function(organism){
 
 KMA$OTU <- clean_org_name(KMA$`# refSequence`)
 KMA <- KMA %>% 
+group_by(Experiment) %>%
   mutate(Total_bp = sum(bpTotal, na.rm = TRUE),
          Total_readCount = sum(readCount, na.rm = TRUE)) %>%
   group_by(OTU, Experiment) %>%
@@ -124,10 +125,13 @@ KMA <- KMA %>%
             refConsensusSum = sum(refConsensusSum),
             .groups = "drop")
 
-if(metadata!="" & reference!=""){
+if(metadata!=""){
   KMA <- merge(KMA, experiments, by="Experiment", all = TRUE)
+}
+
+if(reference!=""){
   KMA <- merge(KMA, ref_community, by.x="OTU", by.y = "Organism", all = TRUE)
 }
 
 output_file <- str_replace_all(filename, "\\.tsv", "_agg.tsv")
-write.csv(KMA, output_file, row.names=FALSE)
+write.table(KMA, output_file, row.names=FALSE, sep="\t")
