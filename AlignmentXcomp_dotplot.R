@@ -2,26 +2,66 @@ library(dplyr)
 library(stringr)
 library(ggplot2)
 library(data.table)
-library(optparse)
 
-# Process input arguments
-option_list = list(
-  make_option(c("-i", "--input"), type="character", default=NULL, 
-              help="Input file comparing two alignments (Comparison_alignments.py)", metavar="character"),
-  make_option(c("-t", "--taxonomic_level"), type="character", default="species", 
-              help="Taxonomic level at which to group [default= %default , genus]", metavar="character"),
-  make_option(c("-s", "--statistic"), type="character", default="Mean_mapped_bp", 
-              help="Statistic to show on plot [default= %default , Diff_mapped_bp]", metavar="character")
-); 
+################################
+# Process command line arguments
+################################
+main <- function(){
+  args <- commandArgs(trailingOnly = TRUE)
+  #default settings
+  stat <- "Mean_mapped_bp"
+  taxlevel <- "species"
+  
+  for (i in 1:length(args)){
+    
+    if (args[i] == "-i"){
+      if (!str_detect(args[[i+1]], "\\.tsv")){
+        usage()
+      }
+      filename <- args[[i+1]]
+    }
+    else if (args[i] == "-t"){
+      if (!(args[[i+1]] %in% c("species", "genus"))){
+        usage()
+      }
+      if (args[[i+1]]=="genus"){
+        taxlevel <- "genus"
+      }else {
+        taxlevel <- "species"
+      }
+      
+    }else if (args[i] == "-s"){
+      if (!(args[[i+1]] %in% c("Mean_mapped_bp", "Diff_mapped_bp", ""))){
+        usage()
+      }
+      if (args[[i+1]]=="Diff_mapped_bp"){
+        stat <- "Diff_mapped_bp"
+      }
+      else {
+        stat <- "Mean_mapped_bp"
+      }
+    }
+    
+  }
+  argslist <- list(file=filename, taxlevel=taxlevel, stat=stat)
+  return(argslist)
+  
+}
 
-opt_parser = OptionParser(option_list=option_list);
-opt = parse_args(opt_parser);
+usage <- function() {
+  cat(
+    "usage: Rscript AlignmentXcomp_dotplot.R -i input.tsv -s statistic -t taxonomic_level",
+    "  -i: input.tsv should be a tsv file generated with Compare_alignments.py", 
+    "  -s: statistic to plot, one of: \n[Mean_mapped_bp: mean of mapped bp to a given template of the two compared alignments, Diff_mapped_bp: difference in mapped bp]\n Default:Mean_mapped_bp",
+    "  -t: taxonomic level at which to compare alignments. One of [species, genus]",sep = "\n")
+}
 
-filename <- opt$input
-taxlevel_species <- opt$taxonomic_level=="species"
-taxlevel_genus <- opt$taxonomic_level=="genus"
-stat_mean <- opt$statistic=="Mean_mapped_bp"
-stat_diff <- opt$statistic=="Diff_mapped_bp"
+args <- main()
+filename <- args$file
+taxlevel_species <- args$taxlevel=="species"
+taxlevel_genus <- args$taxlevel=="genus"
+stat_mean <- args$stat=="Mean_mapped_bp"
+stat_diff <- args$stat=="Diff_mapped_bp"
 
 
 ##########################################
