@@ -2,29 +2,70 @@ library(dplyr)
 library(stringr)
 library(ggplot2)
 library(data.table)
-library(optparse)
 
-# Process input arguments
-option_list = list(
-  make_option(c("-i", "--input"), type="character", default=NULL, 
-              help="Input file: summary data of KMA results, generated with Summarize_KMA_results.py", metavar="character"),
-  make_option(c("-t", "--taxonomic_level"), type="character", default="species", 
-              help="Taxonomic level at which to group [default= %default , genus]", metavar="character"),
-  make_option(c("-r", "--reference_community"), type="character", default=NULL, 
-              help="reference_community file: ;-separated csv file with two columns: Organism, Perc_gDNA", metavar="character"),
-  make_option(c("-m", "--experiment_metadata"), type="character", default=NULL, 
-              help="experiment_metadata file: ;-separated csv file which should at least have two columns:\n - Experiments\n - Alignment_database\n
-              Experiment and database should be named exactly as the output filenames", metavar="character")
-); 
+################################
+# Process command line arguments
+################################
+main <- function(){
+  args <- commandArgs(trailingOnly = TRUE)
+  #default settings
+  reference <- ""
+  metadata <- ""
+  taxlevel <- "species"
+  
+  for (i in 1:length(args)){
+    
+    if (args[i] == "-i"){
+      if (!str_detect(args[[i+1]], "\\.tsv")){
+        usage()
+      }
+      filename <- args[[i+1]]
+    }
+    else if (args[i] == "-t"){
+      if (!(args[[i+1]] %in% c("species", "genus"))){
+        usage()
+      }
+      if (args[[i+1]]=="genus"){
+        taxlevel <- "genus"
+      }else {
+        taxlevel <- "species"
+      }
+      
+    }else if (args[i] == "-r"){
+      if (!str_detect(args[[i+1]], "\\.csv")){
+        usage()
+      }
+      reference <- args[[i+1]]
 
-opt_parser = OptionParser(option_list=option_list);
-opt = parse_args(opt_parser);
+    }else if (args[i] == "-m"){
+      if (!str_detect(args[[i+1]], "\\.csv")){
+        usage()
+      }
+      metadata <- args[[i+1]]
+    }
+    
+  }
+  argslist <- list(file=filename, taxlevel=taxlevel, ref=reference, metadata=metadata)
+  return(argslist)
+  
+}
 
-input_file <- opt$input
-taxlevel_species <- opt$taxonomic_level=="species"
-taxlevel_genus <- opt$taxonomic_level=="genus"
-ref_com_fp <- opt$reference_community=="Mean_mapped_bp"
-experiments_fp <- opt$experiment_metadata=="Diff_mapped_bp"
+usage <- function() {
+  cat(
+    "usage: Rscript AlignmentXcomp_dotplot.R -i input.tsv -s statistic -t taxonomic_level",
+    "  -i: Input file: tsv file with summary data of KMA results, generated with Summarize_KMA_results.py", 
+    "  -r: Filepath to a reference ;-separated csv, containing 2 columns: Organism;Perc_gDNA, default: None",
+    "  -t: taxonomic level at which to compare alignments. One of [species, genus]. Default: species",
+    "  -m: experiment_metadata file: ;-separated csv file which should at least have two columns:\n - Experiments\n - Alignment_database\n
+              Experiment and database should be named exactly as the output filenames", sep = "\n")
+}
+
+args <- main()
+filename <- args$file
+taxlevel_species <- args$taxlevel=="species"
+taxlevel_genus <- args$taxlevel=="genus"
+reference <- args$ref
+metadata <- args$metadata
 
 
 ######################
@@ -32,22 +73,26 @@ experiments_fp <- opt$experiment_metadata=="Diff_mapped_bp"
 ######################
 
 # mock community (reference)
-ref_community <- read.csv(ref_com_fp, sep = ";", dec = ",")
-ref_community_name <- str_extract(ref_com_fp, "/\\w+.csv")
-ref_community_name <- str_remove_all(ref_community_name, "/|.csv")
-ref_community <- ref_community %>%
-  arrange(desc(Perc_gDNA), Organism)
+if(reference!=""){
+  ref_community <- read.csv(reference, sep = ";", dec = ",")
+  ref_community_name <- str_extract(reference, "/\\w+.csv")
+  ref_community_name <- str_remove_all(ref_community_name, "/|.csv")
+  ref_community <- ref_community %>%
+    arrange(desc(Perc_gDNA), Organism)
 
-# sort by descending zymo GMS gDNA% -> make organisms into ordered factors
-ref_community$Organism <- factor(ref_community$Organism, levels = ref_community$Organism,
+  # sort by descending zymo GMS gDNA% -> make organisms into ordered factors
+  ref_community$Organism <- factor(ref_community$Organism, levels = ref_community$Organism,
                            ordered = TRUE)
+}
 
 # Experiment metadata
-experiments <- read.csv(experiments_fp, sep=";")
-experiments$Experiment <- paste0(experiments$Experiment , "_", experiments$Alignment_database)
+if(metadata!=""){
+  experiments <- read.csv(metadata, sep=";")
+  experiments$Experiment <- paste0(experiments$Experiment , "_", experiments$Alignment_database)
+}
 
 # KMA results
-KMA <- fread(input_file, sep="\t", integer64 = "numeric")
+KMA <- fread(filename, sep="\t", integer64 = "numeric")
 
 clean_org_name <- function(organism){
   organism <- str_remove_all(organism, "Synthetic|\\[|\\]|\\scf.")
@@ -78,7 +123,11 @@ KMA <- KMA %>%
             mean_readlength = bpTotal/readCount,
             refConsensusSum = sum(refConsensusSum),
             .groups = "drop")
-KMA <- merge(KMA, experiments, by="Experiment", all = TRUE)
-KMA <- merge(KMA, ref_community, by.x="OTU", by.y = "Organism", all = TRUE)
 
-write.csv(KMA, "./")
+if(metadata!="" & reference!=""){
+  KMA <- merge(KMA, experiments, by="Experiment", all = TRUE)
+  KMA <- merge(KMA, ref_community, by.x="OTU", by.y = "Organism", all = TRUE)
+}
+
+output_file <- str_replace_all(filename, "\\.tsv", "_agg.tsv")
+write.csv(KMA, output_file, row.names=FALSE)
