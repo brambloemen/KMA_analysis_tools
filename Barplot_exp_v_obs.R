@@ -60,7 +60,7 @@ bar_exp_v_obs <- function(df, categorical){
 plot <- bar_exp_v_obs(KMA, !!sym(Compare_category))
 
 pdf(NULL)
-exportpath <- str_replace(args$i, "\\w+\\.tsv?", paste0("Barplot_exp_v_obs_", Compare_category, ".png")) 
+exportpath <- str_replace(args$i, "\\.tsv?", "_barplot_exp_v_obs.png")
 print(exportpath)
 print(plot)
 ggsave(exportpath, width = 16, height = 9, dpi = 100)

@@ -50,7 +50,7 @@ scatter_exp_v_obs <- function(df, categorical){
 plot <- scatter_exp_v_obs(KMA, !!sym(Compare_category))
 
 pdf(NULL)
-exportpath <- str_replace(args$i, "\\w+\\.tsv?", paste0("Exp_v_obs_", Compare_category, ".png")) 
+exportpath <- str_replace(args$i, "\\.tsv?", "_exp_v_obs.png")
 print(exportpath)
 print(plot)
 ggsave(exportpath, width = 16, height = 9, dpi = 100)
