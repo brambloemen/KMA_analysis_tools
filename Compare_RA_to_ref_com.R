@@ -50,7 +50,10 @@ ref_OTU <- ordered(ref_com$OTU)
 KMA$OTU <- ordered(KMA$OTU, levels=ref_OTU)
 
 colors_needed <- length(ref_OTU)
-colors <- replicate(ceiling(colors_needed/9), RColorBrewer::brewer.pal(9, "Set1"))
+palette <- c("#F1975A", "#B5B5B5", "#FFCD33", "#7CAFDD", "#997300", "#255E91", "#43682B", "#698ED0",
+             "#A4A4A4", "#ED7D31", "#616161", "#264478", "#70AD47", "#5B9BD5", "#9E480E", "#E1C200",
+             "#4170C4","#BF0000")
+colors <- replicate(ceiling(colors_needed/(length(palette))), palette)
 
 pdf(NULL)
 exportpath <- str_replace(args$i, "\\.tsv?", "_RA_v_refcom.png")
