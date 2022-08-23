@@ -1,5 +1,6 @@
 
 library(dplyr)
+library(stringr)
 library(RColorBrewer)
 library(ggplot2)
 library(argparse)
@@ -20,7 +21,7 @@ KMA <- read.csv(args$i, sep = "\t")
 Compare_category <- args$c
 
 #Graph theoretical comparison
-graph <- function(df, categorical){
+graph <- function(df, categorical=!!sym(Compare_category)){
   ggplot(df, aes(fill=OTU, x={{categorical}}, y=p_bpTotal)) +
     geom_bar(position="fill", stat="identity", width = 0.9) +
     scale_x_discrete(expand = c(0, 0.6)) +
@@ -54,6 +55,7 @@ palette <- c("#F1975A", "#B5B5B5", "#FFCD33", "#7CAFDD", "#997300", "#255E91", "
              "#A4A4A4", "#ED7D31", "#616161", "#264478", "#70AD47", "#5B9BD5", "#9E480E", "#E1C200",
              "#4170C4","#BF0000")
 colors <- replicate(ceiling(colors_needed/(length(palette))), palette)
+plot <- graph(KMA) + scale_fill_manual(values=colors)
 
 pdf(NULL)
 exportpath <- str_replace(args$i, "\\.tsv?", "_RA_v_refcom.png")

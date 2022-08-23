@@ -16,8 +16,7 @@ parser$add_argument('-r', metavar='--reference_community', type='character', def
 parser$add_argument('-t', metavar='--taxonomic_level', type='character', default="species",
                     help="taxonomic level at which to compare alignments. One of [species, genus]")
 parser$add_argument('-m', metavar='--experiment_metadata', type='character', default="",
-                    help="experiment_metadata file: ;-separated csv file which should at least have two columns: Experiments; Alignment_database
-                    Experiment and database should be named exactly as the output filenames")                    
+                    help="experiment_metadata file: ;-separated csv file which should at least have two columns: Experiments; Alignment_database  Experiment and database should be named exactly as the output filenames")                    
 args <- parser$parse_args()
 
 filename <- args$i
