@@ -12,7 +12,7 @@ parser <- ArgumentParser(description="Plot mapped basepairs vs template coverage
 parser$add_argument('-i', metavar='--input', type='character', 
                     help="Input file: input.tsv should be a tsv file generated with Compare_alignments.py")
 parser$add_argument('-s', metavar='--statistic', type='character', default="Mean_mapped_bp",
-                    help="statistic to plot, one of: \n[Mean_mapped_bp: mean of mapped bp to a given template of the two compared alignments, Diff_mapped_bp: difference in mapped bp]\n Default:Mean_mapped_bp")
+                    help="statistic to plot, one of: [Mean_mapped_bp: mean of mapped bp to a given template of the two compared alignments, Diff_mapped_bp: difference in mapped bp] Default:Mean_mapped_bp")
 parser$add_argument('-t', metavar='--taxonomic_level', type='character', default="species",
                     help="taxonomic level at which to compare alignments. One of [species, genus]")
 args <- parser$parse_args()
@@ -74,8 +74,8 @@ if(taxlevel_species){
   data[is.na(data)] <- 0
   data <- data %>% summarize_all(sum)
   data <- mutate(data,
-                 Mean_mapped_bp = (n_match_bases1 + n_match_bases2)/2,
-                 Diff_mapped_bp = abs(n_match_bases1 - n_match_bases2),
+                 Mean_mapped_bp = as.numeric(n_match_bases1 + n_match_bases2)/2,
+                 Diff_mapped_bp =  as.numeric(abs(n_match_bases1 - n_match_bases2)),
                  Rel_diff_mapped_bp = Diff_mapped_bp/Mean_mapped_bp)
 
   if(stat_mean){
@@ -83,12 +83,14 @@ if(taxlevel_species){
       geom_point(aes(col=Agree, size=Mean_mapped_bp)) +
       theme_classic() +
       theme(axis.text.x = element_text(angle=90)) +
+      labs(x= "Alignment 1", y= "Alignment 2") +
       guides(color = guide_legend(override.aes = list(size = 8)))
   } else if(stat_diff){
     plot <- ggplot(data, aes(x = Organism1, y= Organism2)) +
       geom_point(aes(col=Agree, size=Rel_diff_mapped_bp)) +
       theme_classic() +
       theme(axis.text.x = element_text(angle=90)) +
+      labs(x= "Alignment 1", y= "Alignment 2") +
       guides(color = guide_legend(override.aes = list(size = 8)))
   }
   
@@ -99,8 +101,8 @@ if(taxlevel_species){
   data[is.na(data)] <- 0
   data <- data %>% summarize_all(sum)
   data <- mutate(data,
-                 Mean_mapped_bp = (n_match_bases1 + n_match_bases2)/2,
-                 Diff_mapped_bp = abs(n_match_bases1 - n_match_bases2),
+                 Mean_mapped_bp =  as.numeric(n_match_bases1 + n_match_bases2)/2,
+                 Diff_mapped_bp =  as.numeric(abs(n_match_bases1 - n_match_bases2)),
                  Rel_diff_mapped_bp = Diff_mapped_bp/Mean_mapped_bp)
   
   if(stat_mean){
@@ -108,12 +110,14 @@ if(taxlevel_species){
       geom_point(aes(col=Agree, size=Mean_mapped_bp)) +
       theme_classic() +
       theme(axis.text.x = element_text(angle=90)) +
+      labs(x= "Alignment 1", y= "Alignment 2") +
       guides(color = guide_legend(override.aes = list(size = 8)))
   } else if(stat_diff){
     plot <- ggplot(data, aes(x = Genus1, y= Genus2)) +
       geom_point(aes(col=Agree, size=Rel_diff_mapped_bp)) +
       theme_classic() +
       theme(axis.text.x = element_text(angle=90)) +
+      labs(x= "Alignment 1", y= "Alignment 2") +
       guides(color = guide_legend(override.aes = list(size = 8)))
   }
 }

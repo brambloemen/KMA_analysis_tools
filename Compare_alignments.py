@@ -19,12 +19,13 @@ args = parser.parse_args()
 """
 Loop over alignment 1
 """
+logging.info(f"Parsing alignment 1: {args.bam1}")
 align1 = pysam.AlignmentFile(args.bam1, "rb", threads=1)
 align1_refseq = {ref["SN"]:ref["LN"] for ref in align1.header.to_dict()["SQ"]}
 align1_n_lines = 0
 
 # align1 dictionary: {read:[Template1, readlength, matching bases, Template1 total reference length]}
-logging.info("Parsing alignment 1")
+
 align1_reads = defaultdict(lambda: [str, 0, 0])
 for read in align1:
     # store read identifiers
@@ -46,11 +47,11 @@ Loop over alignment 2
 
 # summary dictionary. structure: {AMR gene: {Species: [#reads, total readlength, #exactly matched bases, readlength mapped to AMR, exactly matched bases to AMR, AMR template length]}}
 alignment_links = defaultdict(lambda: defaultdict(lambda: [0, 0, 0, 0, 0, 0]))
-
+logging.info(f"Parsing alignment 2: {args.bam2}")
 align2 = pysam.AlignmentFile(args.bam2, "rb", threads=1)
 align2_refseq = {ref["SN"]:ref["LN"] for ref in align2.header.to_dict()["SQ"]}
 align2_n_lines = 0
-logging.info("Parsing alignment 2")
+
 for read in align2:
     # read identifiers
     n = re.search("read=\d+\sch=\d+",read.query_name).group()

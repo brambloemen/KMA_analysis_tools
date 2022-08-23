@@ -1,3 +1,4 @@
+library(argparse)
 library(dplyr)
 library(stringr)
 library(ggplot2)
@@ -6,66 +7,24 @@ library(data.table)
 ################################
 # Process command line arguments
 ################################
-main <- function(){
-  args <- commandArgs(trailingOnly = TRUE)
-  #default settings
-  reference <- ""
-  metadata <- ""
-  taxlevel <- "species"
-  
-  for (i in 1:length(args)){
-    
-    if (args[i] == "-i"){
-      if (!str_detect(args[[i+1]], "\\.tsv")){
-        usage()
-      }
-      filename <- args[[i+1]]
-    }
-    else if (args[i] == "-t"){
-      if (!(args[[i+1]] %in% c("species", "genus"))){
-        usage()
-      }
-      if (args[[i+1]]=="genus"){
-        taxlevel <- "genus"
-      }else {
-        taxlevel <- "species"
-      }
-      
-    }else if (args[i] == "-r"){
-      if (!str_detect(args[[i+1]], "\\.csv")){
-        usage()
-      }
-      reference <- args[[i+1]]
 
-    }else if (args[i] == "-m"){
-      if (!str_detect(args[[i+1]], "\\.csv")){
-        usage()
-      }
-      metadata <- args[[i+1]]
-    }
-    
-  }
-  argslist <- list(file=filename, taxlevel=taxlevel, ref=reference, metadata=metadata)
-  return(argslist)
-  
-}
+parser <- ArgumentParser(description="Plot mapped basepairs vs template coverage, optionally label reference community members (if present)")
+parser$add_argument('-i', metavar='--input', type='character', 
+                    help="Input file: input.tsv should be a tsv file generated with Compare_alignments.py")
+parser$add_argument('-r', metavar='--reference_community', type='character', default="",
+                    help=" Filepath to a reference community ;-separated csv, containing: Organism; Perc_gDNA")
+parser$add_argument('-t', metavar='--taxonomic_level', type='character', default="species",
+                    help="taxonomic level at which to compare alignments. One of [species, genus]")
+parser$add_argument('-m', metavar='--experiment_metadata', type='character', default="",
+                    help="experiment_metadata file: ;-separated csv file which should at least have two columns: Experiments; Alignment_database
+                    Experiment and database should be named exactly as the output filenames")                    
+args <- parser$parse_args()
 
-usage <- function() {
-  cat(
-    "usage: Rscript AlignmentXcomp_dotplot.R -i input.tsv -s statistic -t taxonomic_level",
-    "  -i: Input file: tsv file with summary data of KMA results, generated with Summarize_KMA_results.py", 
-    "  -r: Filepath to a reference ;-separated csv, containing 2 columns: Organism;Perc_gDNA, default: None",
-    "  -t: taxonomic level at which to compare alignments. One of [species, genus]. Default: species",
-    "  -m: experiment_metadata file: ;-separated csv file which should at least have two columns:\n - Experiments\n - Alignment_database\n
-              Experiment and database should be named exactly as the output filenames", sep = "\n")
-}
-
-args <- main()
-filename <- args$file
-taxlevel_species <- args$taxlevel=="species"
-taxlevel_genus <- args$taxlevel=="genus"
-reference <- args$ref
-metadata <- args$metadata
+filename <- args$i
+taxlevel_species <- args$t=="species"
+taxlevel_genus <- args$t=="genus"
+reference <- args$r
+metadata <- args$m
 
 
 ######################

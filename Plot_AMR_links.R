@@ -14,7 +14,7 @@ parser$add_argument('-i', metavar='--input', type='character',
                     help="Input file: input.tsv should be a tsv file generated with Compare_alignments.py")
 parser$add_argument('-r', metavar='--reference_ARGprofile', type='character', default="",
                     help=" Filepath to a reference ;-separated csv, containing 2 columns: Organism;ARG, default: None")
-parser$add_argument('-t', metavar='--taxonomic_level', type='character', default="Mean_mapped_bp",
+parser$add_argument('-t', metavar='--taxonomic_level', type='character', default="species",
                     help="taxonomic level at which to compare alignments. One of [species, genus]")
 args <- parser$parse_args()
 
@@ -29,7 +29,7 @@ reference <- args$r
 ###################################
 
 if(reference!=""){
-  reference_data <- read.csv(reference, sep = "\t") %>%
+  reference_data <- read.csv(reference, sep = ";") %>%
     mutate(Reference_AMR_link=TRUE)
   reference_ARGs <- data.frame(reference_data$ARG) %>% mutate(Reference_AMR=TRUE)
 }
@@ -72,6 +72,8 @@ data <- mutate(data,
 if(taxlevel_species){
   
   data <- data %>%
+    filter(ARG != "") %>%
+    filter(!is.na(ARG)) %>%
     group_by(Organism, ARG) %>%
     summarize(n_reads=sum(n_reads, na.rm = TRUE),
               sum_readlength=sum(sum_readlength, na.rm = TRUE),
@@ -86,6 +88,7 @@ if(taxlevel_species){
       ggplot(aes(x=ARG, y=Organism)) +
       geom_point(aes(size=n_reads)) +
       theme_classic() +
+      theme(axis.text.x = element_text(angle=90)) +
       guides(color = guide_legend(override.aes = list(size = 8)))
   }else{
     data <- merge(data, reference_data, by=c("Organism", "ARG"), all=TRUE) %>%
@@ -96,12 +99,15 @@ if(taxlevel_species){
       ggplot(aes(x=ARG, y=Organism)) +
       geom_point(aes(col=Reference_AMR_link, size=n_reads)) +
       theme_classic() +
+      theme(axis.text.x = element_text(angle=90)) +
       guides(color = guide_legend(override.aes = list(size = 8)))
   }
   
 } else if(taxlevel_genus){
   
   data <- data %>% 
+    filter(ARG != "") %>%
+    filter(!is.na(ARG)) %>%
     group_by(Genus, ARG) %>%
     summarize(n_reads=sum(n_reads, na.rm = TRUE),
               sum_readlength=sum(sum_readlength, na.rm = TRUE),
@@ -116,6 +122,7 @@ if(taxlevel_species){
       ggplot(aes(x=ARG, y=Genus)) +
       geom_point(aes(size=n_reads)) +
       theme_classic() +
+      theme(axis.text.x = element_text(angle=90)) +
       guides(color = guide_legend(override.aes = list(size = 8)))
   }else{
     reference_data <- mutate(reference_data, Genus=str_extract(Organism, "[:upper:]{1}[:lower:]+"))
@@ -128,6 +135,7 @@ if(taxlevel_species){
       ggplot(aes(x=ARG, y=Genus)) +
       geom_point(aes(col=Reference_AMR_link, size=n_reads)) +
       theme_classic() +
+      theme(axis.text.x = element_text(angle=90)) +
       guides(color = guide_legend(override.aes = list(size = 8)))
   }
 }
