@@ -77,6 +77,7 @@ group_by(Experiment) %>%
             mean_template_length = mean(Template_length, na.rm=TRUE),
             mean_template_coverage = weighted.mean(Template_Coverage, bpTotal, na.rm=TRUE),
             bpTotal = sum(bpTotal, na.rm = TRUE),
+            depth = bpTotal/total_template_length,
             p_readCount = sum(readCount, na.rm = TRUE)/unique(Total_readCount),
             readCount = sum(readCount, na.rm=TRUE),
             mean_readlength = bpTotal/readCount,

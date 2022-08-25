@@ -15,6 +15,8 @@ parser$add_argument('-r', metavar='--reference', type='logical', default=FALSE,
 args <- parser$parse_args()
 
 KMA <- read.csv(args$i, sep = "\t")
+KMA <- KMA %>% filter(!is.na(OTU)) %>%
+  filter(!is.na(Experiment))
 
 if(args$r){
   
