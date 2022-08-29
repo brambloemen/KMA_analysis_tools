@@ -1,4 +1,5 @@
 import pysam
+import pandas as pd
 import argparse
 import re
 import csv
@@ -10,17 +11,22 @@ import sys
 logging.basicConfig(level = logging.DEBUG,format='%(asctime)s %(message)s',
                     datefmt='%x %X')
 parser = argparse.ArgumentParser(description='Retrieve alignments from alignment file 1 in alignment file 2; \nPrint results to standard output')
-parser.add_argument("bam1", metavar="--input_1.bam", type=str, help="Filepath of bam alignment 1")
-# make fastq input optional
-parser.add_argument("bam2", metavar="--input_2.bam", type=str, help="Filepath of bam alignment 2")
+parser.add_argument("-t", dest="bam_taxa", type=str, help="Filepath of bam with alignment to taxa database")
+parser.add_argument("-r", dest="taxa_res", type=str, help="Filepath of res file of KMA alignmnent to taxa database")
+parser.add_argument("-a", dest="AMR_bam", type=str, help="Filepath of bam with alignments to resistance database")
+parser.add_argument("--tc", metavar="--tc", type=float, help="Minimum template coverage for a template to be accepted", default=0.0)
 args = parser.parse_args()
 
+Filtered_templates = pd.read_csv(args.taxa_res, sep="\t")
+Filtered_templates = Filtered_templates[Filtered_templates["Template_Coverage"] >= args.tc]["#Template"]
+Filtered_templates = Filtered_templates.tolist()
+
 
 """
-Loop over alignment 1
+Loop over alignment to taxa
 """
-logging.info(f"Parsing alignment 1: {args.bam1}")
-align1 = pysam.AlignmentFile(args.bam1, "rb", threads=1)
+logging.info(f"Parsing alignment 1: {args.bam_taxa}")
+align1 = pysam.AlignmentFile(args.bam_taxa, "rb", threads=1)
 align1_refseq = {ref["SN"]:ref["LN"] for ref in align1.header.to_dict()["SQ"]}
 align1_n_lines = 0
 
@@ -28,6 +34,9 @@ align1_n_lines = 0
 
 align1_reads = defaultdict(lambda: [str, 0, 0])
 for read in align1:
+    # skip alignment if total template coverage was too low
+    if read.reference_name not in Filtered_templates:
+        continue
     # store read identifiers
     n = re.search("read=\d+\sch=\d+",read.query_name).group()
     n = re.sub("\D", "", n)
@@ -42,13 +51,13 @@ logging.info(f"Done parsing alignment 1. Processed {align1_n_lines} alignments")
 
 
 """
-Loop over alignment 2
+Loop over alignment to resistance database
 """
 
 # summary dictionary. structure: {AMR gene: {Species: [#reads, total readlength, #exactly matched bases, readlength mapped to AMR, exactly matched bases to AMR, AMR template length]}}
 alignment_links = defaultdict(lambda: defaultdict(lambda: [0, 0, 0, 0, 0, 0]))
-logging.info(f"Parsing alignment 2: {args.bam2}")
-align2 = pysam.AlignmentFile(args.bam2, "rb", threads=1)
+logging.info(f"Parsing alignment 2: {args.AMR_bam}")
+align2 = pysam.AlignmentFile(args.AMR_bam, "rb", threads=1)
 align2_refseq = {ref["SN"]:ref["LN"] for ref in align2.header.to_dict()["SQ"]}
 align2_n_lines = 0
 

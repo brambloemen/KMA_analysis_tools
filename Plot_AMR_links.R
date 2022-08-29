@@ -30,13 +30,15 @@ reference <- args$r
 
 if(reference!=""){
   reference_data <- read.csv(reference, sep = ";") %>%
-    mutate(Reference_AMR_link=TRUE)
+    mutate(Reference_AMR_link=TRUE,
+           Species = Organism) %>%
+    select(-Organism)
   reference_ARGs <- data.frame(reference_data$ARG) %>% mutate(Reference_AMR=TRUE)
 }
 
 
 ##########################################
-# functions to clean ARG and organism name
+# functions to clean and summarize data  #
 ##########################################
 
 clean_org_name <- function(organism){
@@ -55,88 +57,79 @@ clean_ARG_names <- function(amr_gene){
   return(amr_gene)
 }
 
+aggregate_by_OTU <- function(data){
+  data <- data %>%
+    summarize(n_reads=sum(n_reads, na.rm = TRUE),
+              Total_readlength=sum(Total_readlength, na.rm = TRUE),
+              n_match_bases1=sum(n_match_bases1, na.rm = TRUE),
+              n_match_bases2=sum(n_match_bases2, na.rm = TRUE),
+              Template1_length=sum(Template1_length)/n(),
+              Template2_length=sum(Template2_length)/n())
+    return(data)
+}
+
+
+#######################
+# plotting functions  #
+#######################
+
+plot_links_byreads <- function(data, taxa){
+  plot <- data %>%
+      ggplot(aes(x=ARG, y={{taxa}})) +
+      geom_point(aes(size=Total_readlength)) +
+      theme_classic() +
+      theme(axis.text.x = element_text(angle=90)) +
+      guides(color = guide_legend(override.aes = list(size = 8)))
+  return(plot)
+} 
+
 
 ####################################
 # read in alignment comparison file
 ####################################
 
-data <- fread(filename, sep = "\t", integer64 = "numeric")
+data <- fread(filename, sep = "\t", integer64 = "numeric", fill=TRUE)
 
 data <- mutate(data, 
-               Template1=clean_org_name(Template1),
-               Organism=Template1,
-               Genus=str_extract(Organism, "[:upper:]{1}[:lower:]+"),
-               Template2=clean_ARG_names(Template2),
-               ARG=Template2)
+               Species=clean_org_name(Template1),
+               Genus=str_extract(Species, "[:upper:]{1}[:lower:]+"),
+               ARG=clean_ARG_names(Template2)) %>%
+    filter(ARG != "") %>%
+    filter(!is.na(ARG) & ARG != "Unmapped") %>%
+    filter(n_match_bases1 > 0)
 
 if(taxlevel_species){
   
   data <- data %>%
-    filter(ARG != "") %>%
-    filter(!is.na(ARG)) %>%
-    group_by(Organism, ARG) %>%
-    summarize(n_reads=sum(n_reads, na.rm = TRUE),
-              sum_readlength=sum(sum_readlength, na.rm = TRUE),
-              n_match_bases1=sum(n_match_bases1, na.rm = TRUE),
-              n_match_bases2=sum(n_match_bases2, na.rm = TRUE),
-              Template1_length=sum(Template1_length)/n(),
-              Template2_length=sum(Template2_length)/n()) %>%
-    mutate(Coverage_ARG = n_match_bases2)
+    group_by(Species, ARG) %>%
+    aggregate_by_OTU()
   
   if(reference==""){
-    plot <- data %>%
-      ggplot(aes(x=ARG, y=Organism)) +
-      geom_point(aes(size=n_reads)) +
-      theme_classic() +
-      theme(axis.text.x = element_text(angle=90)) +
-      guides(color = guide_legend(override.aes = list(size = 8)))
+    plot <- plot_links_byreads(data, Species)
   }else{
-    data <- merge(data, reference_data, by=c("Organism", "ARG"), all=TRUE) %>%
+    data <- merge(data, reference_data, by=c("Species", "ARG"), all=TRUE) %>%
       mutate(Reference_AMR_link=ifelse(Reference_AMR_link, Reference_AMR_link, FALSE),
              Reference_AMR_link=ifelse(is.na(Reference_AMR_link), FALSE, Reference_AMR_link)) 
     
-    plot <- data %>%
-      ggplot(aes(x=ARG, y=Organism)) +
-      geom_point(aes(col=Reference_AMR_link, size=n_reads)) +
-      theme_classic() +
-      theme(axis.text.x = element_text(angle=90)) +
-      guides(color = guide_legend(override.aes = list(size = 8)))
+    plot <- plot_links_byreads(data, Species) + geom_point(aes(col=Reference_AMR_link, size=Total_readlength))
   }
   
 } else if(taxlevel_genus){
   
-  data <- data %>% 
-    filter(ARG != "") %>%
-    filter(!is.na(ARG)) %>%
+  data <- data %>%
     group_by(Genus, ARG) %>%
-    summarize(n_reads=sum(n_reads, na.rm = TRUE),
-              sum_readlength=sum(sum_readlength, na.rm = TRUE),
-              n_match_bases1=sum(n_match_bases1, na.rm = TRUE),
-              n_match_bases2=sum(n_match_bases2, na.rm = TRUE),
-              Template1_length=sum(Template1_length)/n(),
-              Template2_length=sum(Template2_length)/n()) %>%
-    mutate(Coverage_ARG = n_match_bases2)
+    aggregate_by_OTU()
   
   if(reference==""){
-    plot <- data %>%
-      ggplot(aes(x=ARG, y=Genus)) +
-      geom_point(aes(size=n_reads)) +
-      theme_classic() +
-      theme(axis.text.x = element_text(angle=90)) +
-      guides(color = guide_legend(override.aes = list(size = 8)))
+    plot <- plot_links_byreads(data, Genus)
   }else{
-    reference_data <- mutate(reference_data, Genus=str_extract(Organism, "[:upper:]{1}[:lower:]+"))
+    reference_data <- mutate(reference_data, Genus=str_extract(Species, "[:upper:]{1}[:lower:]+"))
     
     data <- merge(data, reference_data, by=c("Genus", "ARG"), all=TRUE) %>%
       mutate(Reference_AMR_link=ifelse(Reference_AMR_link, Reference_AMR_link, FALSE),
              Reference_AMR_link=ifelse(is.na(Reference_AMR_link), FALSE, Reference_AMR_link)) 
     
-    plot <- data %>%
-      ggplot(aes(x=ARG, y=Genus)) +
-      geom_point(aes(col=Reference_AMR_link, size=n_reads)) +
-      theme_classic() +
-      theme(axis.text.x = element_text(angle=90)) +
-      guides(color = guide_legend(override.aes = list(size = 8)))
+    plot <- plot_links_byreads(data, Genus) + geom_point(aes(col=Reference_AMR_link, size=Total_readlength))
   }
 }
 
