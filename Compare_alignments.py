@@ -26,7 +26,7 @@ align1_n_lines = 0
 
 # align1 dictionary: {read:[Template1, readlength, matching bases, Template1 total reference length]}
 
-align1_reads = defaultdict(lambda: [str, 0, 0])
+align1_reads = defaultdict(lambda: [str, 0, 0, 0])
 for read in align1:
     # store read identifiers
     n = re.search("read=\d+\sch=\d+",read.query_name).group()
@@ -66,7 +66,7 @@ for read in align2:
     if n in align1_reads:
         Template1, Template1_readl, Template1_cigarEQ, Template1_l = align1_reads.pop(n, None) # pop matched reads from amr_reads: unmapped reads will remain
         alignment_links[Template1][Template2][0] += 1
-        alignment_links[Template1][Template2][1] += l # will be total length of all reads aligned to both template 1 and 2
+        alignment_links[Template1][Template2][1] += Template1_readl # will be total length of all reads aligned to both template 1 and 2
         alignment_links[Template1][Template2][2] += Template1_cigarEQ
         alignment_links[Template1][Template2][3] += cigarEQ 
         alignment_links[Template1][Template2][4] = Template1_l
@@ -91,13 +91,17 @@ for temp1, temp2 in alignment_links.items():
     for template2, stats in temp2.items():
         writer.writerow([temp1, template2] + stats)
 
-# amr not recognized in species file
+# reads from bam 2 not recognized in bam 1
 unmapped = defaultdict(lambda: {"Unmapped":[0, 0, 0, 0, 0, 0]})
 # summarize remaining (= unmapped) alignments from align1_reads dictionary
 for stats in align1_reads.values():
     Template1, Template1_readl, Template1_cigarEQ, Template1_l = stats
-    unmapped[Template1]["Unmapped"][3] += Template1_cigarEQ
+    unmapped[Template1]["Unmapped"][0] += 1
+    unmapped[Template1]["Unmapped"][1] += Template1_readl # will be total length of all reads aligned to both template 1 and 2
+    unmapped[Template1]["Unmapped"][2] += Template1_cigarEQ
+    unmapped[Template1]["Unmapped"][3] = None
     unmapped[Template1]["Unmapped"][4] = Template1_l
+    unmapped[Template1]["Unmapped"][5] = None
 # write unmapped row per amr gene
 for temp1, unmap_stats in unmapped.items():
     writer.writerow([temp1] + list(unmap_stats))

@@ -64,7 +64,10 @@ aggregate_by_OTU <- function(data){
               n_match_bases1=sum(n_match_bases1, na.rm = TRUE),
               n_match_bases2=sum(n_match_bases2, na.rm = TRUE),
               Template1_length=sum(Template1_length)/n(),
-              Template2_length=sum(Template2_length)/n())
+              Template2_length=sum(Template2_length)/n(),
+              Organism_QID = n_match_bases1/Total_readlength,
+              ARG_TID = n_match_bases2/(Template2_length*n_reads),
+              AMR_links = n_reads * Organism_QID * ARG_TID)
     return(data)
 }
 
@@ -76,7 +79,7 @@ aggregate_by_OTU <- function(data){
 plot_links_byreads <- function(data, taxa){
   plot <- data %>%
       ggplot(aes(x=ARG, y={{taxa}})) +
-      geom_point(aes(size=Total_readlength)) +
+      geom_point(aes(size=AMR_links)) +
       theme_classic() +
       theme(axis.text.x = element_text(angle=90)) +
       guides(color = guide_legend(override.aes = list(size = 8)))
@@ -111,7 +114,7 @@ if(taxlevel_species){
       mutate(Reference_AMR_link=ifelse(Reference_AMR_link, Reference_AMR_link, FALSE),
              Reference_AMR_link=ifelse(is.na(Reference_AMR_link), FALSE, Reference_AMR_link)) 
     
-    plot <- plot_links_byreads(data, Species) + geom_point(aes(col=Reference_AMR_link, size=Total_readlength))
+    plot <- plot_links_byreads(data, Species) + geom_point(aes(col=Reference_AMR_link, size=AMR_links))
   }
   
 } else if(taxlevel_genus){
@@ -129,7 +132,7 @@ if(taxlevel_species){
       mutate(Reference_AMR_link=ifelse(Reference_AMR_link, Reference_AMR_link, FALSE),
              Reference_AMR_link=ifelse(is.na(Reference_AMR_link), FALSE, Reference_AMR_link)) 
     
-    plot <- plot_links_byreads(data, Genus) + geom_point(aes(col=Reference_AMR_link, size=Total_readlength))
+    plot <- plot_links_byreads(data, Genus) + geom_point(aes(col=Reference_AMR_link, size=AMR_links))
   }
 }
 
