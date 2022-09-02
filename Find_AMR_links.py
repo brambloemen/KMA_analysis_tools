@@ -11,15 +11,24 @@ import sys
 logging.basicConfig(level = logging.DEBUG,format='%(asctime)s %(message)s',
                     datefmt='%x %X')
 parser = argparse.ArgumentParser(description='Retrieve alignments from alignment file 1 in alignment file 2; \nPrint results to standard output')
-parser.add_argument("-t", dest="bam_taxa", type=str, help="Filepath of bam with alignment to taxa database")
-parser.add_argument("-r", dest="taxa_res", type=str, help="Filepath of res file of KMA alignmnent to taxa database")
-parser.add_argument("-a", dest="AMR_bam", type=str, help="Filepath of bam with alignments to resistance database")
-parser.add_argument("--tc", metavar="--tc", type=float, help="Minimum template coverage for a template to be accepted", default=0.0)
+parser.add_argument("-t", metavar="taxa.bam", dest="bam_taxa", type=str, help="Filepath of bam with alignment to taxa database")
+# parser.add_argument("-r", dest="taxa_res", type=str, help="Filepath of res file of KMA alignmnent to taxa database")
+parser.add_argument("-a", metavar="AMR.bam", dest="AMR_bam", type=str, help="Filepath of bam with alignments to resistance database")
+parser.add_argument("--tc", type=float, help="Minimum template coverage for a taxa template to be accepted", default=0.0)
+parser.add_argument("--pid_arg", type=float, help="Minimum Percentage Identity to AMR gene template", default=0.0)
 args = parser.parse_args()
 
-Filtered_templates = pd.read_csv(args.taxa_res, sep="\t")
-Filtered_templates = Filtered_templates[Filtered_templates["Template_Coverage"] >= args.tc]["#Template"]
-Filtered_templates = Filtered_templates.tolist()
+# Filter for taxa
+fp_taxa_res = re.sub("\..am", ".res", args.bam_taxa)
+Filtered_taxa = pd.read_csv(fp_taxa_res, sep="\t")
+Filtered_taxa = Filtered_taxa[Filtered_taxa["Template_Coverage"] >= args.tc]["#Template"]
+Filtered_taxa = Filtered_taxa.tolist()
+
+# Filter for AMR genes
+fp_AMR_res = re.sub("\..am", ".res", args.AMR_bam)
+Filtered_AMR = pd.read_csv(fp_AMR_res, sep="\t")
+Filtered_AMR = Filtered_AMR[Filtered_AMR["Template_Identity"] >= args.pid_arg]["#Template"]
+Filtered_AMR = Filtered_AMR.tolist()
 
 
 """
@@ -36,7 +45,7 @@ align1_reads = defaultdict(lambda: [str, 0, 0, 0])
 for read in align1:
     align1_n_lines += 1
     # skip alignment if total template coverage was too low
-    if read.reference_name not in Filtered_templates:
+    if read.reference_name not in Filtered_taxa:
         continue
     # store read identifiers
     n = re.search("read=\d+\sch=\d+",read.query_name).group()
@@ -70,11 +79,16 @@ for read in align2:
     # alignment stats
     if read.reference_name == None: # not aligned to AMR --> skip
         continue
+    if read.reference_name not in Filtered_AMR: # KMA alignment to AMR gene template was not identical enough
+        continue
     else:
         Template2 = read.reference_name
     l = read.query_length
     cigarEQ = read.get_cigar_stats()[0][7] # EQ: exact sequence match (base in query matches base in template)
     Template2_l = align2_refseq.get(Template2, None)
+    # matching bases/AMR length == Percentage Identity --> should also be filtered, !! currently does not consider reads that align to only part of the AMR
+    if 100*cigarEQ/Template2_l < args.pid_arg:
+        continue
 
 
     if n in align1_reads:
