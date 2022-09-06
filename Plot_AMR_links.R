@@ -42,18 +42,25 @@ if(reference!=""){
 ##########################################
 
 clean_org_name <- function(organism){
-  organism <- str_remove_all(organism, "Synthetic|\\[|\\]|\\scf.")
-  organism <- str_replace_all(organism, "_", " ")
-  organism <- str_replace_all(organism, "E.coli.*", "Escherichia coli")
-  organism <- str_replace_all(organism, "veillonella", "Veillonella")
-  organism <- str_replace_all(organism, "\\.", " ")
-  organism <- str_extract(organism, "[:upper:]{1}[:lower:]+\\s[:alpha:]+\\.?")
-  organism <- str_replace(organism, "Clostridium difficil+e", "Clostridioides difficile")
+  if(organism=="Unmapped"){
+    organism <- "Unmapped"
+  }
+  else{
+    organism <- str_remove_all(organism, "Synthetic|\\[|\\]|\\scf.")
+    organism <- str_replace_all(organism, "_", " ")
+    organism <- str_replace_all(organism, "E.coli.*", "Escherichia coli")
+    organism <- str_replace_all(organism, "veillonella", "Veillonella")
+    organism <- str_replace_all(organism, "\\.", " ")
+    organism <- str_extract(organism, "[:upper:]{1}[:lower:]+\\s[:alpha:]+\\.?")
+    organism <- str_replace(organism, "Clostridium difficil+e", "Clostridioides difficile")
+  }
+  
   return(organism)
 }
 
 clean_ARG_names <- function(amr_gene){
-  amr_gene <- str_remove(amr_gene, "(_|-).+")
+  amr_gene <- str_remove(amr_gene, "_.+")
+  amr_gene <- str_remove(amr_gene, "-\\d+.+$")
   return(amr_gene)
 }
 
@@ -67,7 +74,9 @@ aggregate_by_OTU <- function(data){
               Template2_length=sum(Template2_length)/n(),
               Organism_QID = n_match_bases1/Total_readlength,
               ARG_TID = n_match_bases2/(Template2_length*n_reads),
-              AMR_links = n_reads * Organism_QID * ARG_TID)
+              AMR_links = case_when(
+                is.na(Organism_QID) ~  Total_readlength * ARG_TID,
+                TRUE ~ Total_readlength * Organism_QID * ARG_TID))
     return(data)
 }
 
@@ -94,18 +103,18 @@ plot_links_byreads <- function(data, taxa){
 data <- fread(filename, sep = "\t", integer64 = "numeric", fill=TRUE)
 
 data <- mutate(data, 
-               Species=clean_org_name(Template1),
-               Genus=str_extract(Species, "[:upper:]{1}[:lower:]+"),
+               Species=sapply(Template1, clean_org_name),
+               Genus=str_extract(Species, "([:upper:]{1}[:lower:]+)|Unmapped"), 
                ARG=clean_ARG_names(Template2)) %>%
     filter(ARG != "") %>%
-    filter(!is.na(ARG) & ARG != "Unmapped") %>%
-    filter(n_match_bases1 > 0)
+    filter(!is.na(ARG) & ARG != "Unmapped") 
 
 if(taxlevel_species){
   
   data <- data %>%
     group_by(Species, ARG) %>%
-    aggregate_by_OTU()
+    aggregate_by_OTU() %>%
+    filter(AMR_links > 0)
   
   if(reference==""){
     plot <- plot_links_byreads(data, Species)
@@ -121,7 +130,8 @@ if(taxlevel_species){
   
   data <- data %>%
     group_by(Genus, ARG) %>%
-    aggregate_by_OTU()
+    aggregate_by_OTU() %>%
+    filter(AMR_links > 0)
   
   if(reference==""){
     plot <- plot_links_byreads(data, Genus)

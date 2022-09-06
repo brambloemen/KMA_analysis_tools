@@ -14,21 +14,31 @@ parser = argparse.ArgumentParser(description='Retrieve alignments from alignment
 parser.add_argument("-t", metavar="taxa.bam", dest="bam_taxa", type=str, help="Filepath of bam with alignment to taxa database")
 # parser.add_argument("-r", dest="taxa_res", type=str, help="Filepath of res file of KMA alignmnent to taxa database")
 parser.add_argument("-a", metavar="AMR.bam", dest="AMR_bam", type=str, help="Filepath of bam with alignments to resistance database")
-parser.add_argument("--tc", type=float, help="Minimum template coverage for a taxa template to be accepted", default=0.0)
-parser.add_argument("--pid_arg", type=float, help="Minimum Percentage Identity to AMR gene template", default=0.0)
+parser.add_argument("--tc_taxa", type=float, help="Minimum template coverage for a taxa template to be accepted", default=0.0)
+parser.add_argument("--tid_taxa", type=float, help="Minimum template identity for a taxa template to be accepted", default=0.0)
+parser.add_argument("--qid_taxa", type=float, help="Minimum query identity for a taxa template to be accepted", default=0.0)
+parser.add_argument("--tlen_taxa", type=float, help="Minimum template length for a taxa template to be accepted", default=0.0)
+parser.add_argument("--tdep_taxa", type=float, help="Minimum template depth for a taxa template to be accepted", default=0.0)
+parser.add_argument("--tid_arg", type=float, help="Minimum Percentage Identity to AMR gene template", default=0.0)
+parser.add_argument("--tdep_arg", type=float, help="Minimum depth to AMR gene template", default=0.0)
 args = parser.parse_args()
 
-# Filter for taxa
+# Filter for taxa -> insufficient taxa templates will not be considered for AMR linking
 fp_taxa_res = re.sub("\..am", ".res", args.bam_taxa)
 Filtered_taxa = pd.read_csv(fp_taxa_res, sep="\t")
-Filtered_taxa = Filtered_taxa[Filtered_taxa["Template_Coverage"] >= args.tc]["#Template"]
-Filtered_taxa = Filtered_taxa.tolist()
+Filtered_taxa = Filtered_taxa[Filtered_taxa["Template_Coverage"] >= args.tc_taxa]
+Filtered_taxa = Filtered_taxa[Filtered_taxa["Template_Coverage"] >= args.qid_taxa]
+Filtered_taxa = Filtered_taxa[Filtered_taxa["Template_Identity"] >= args.tid_taxa]
+Filtered_taxa = Filtered_taxa[Filtered_taxa["Template_length"] >= args.tlen_taxa]
+Filtered_taxa = Filtered_taxa[Filtered_taxa["Depth"] >= args.tdep_taxa]
+Filtered_taxa = Filtered_taxa["#Template"].tolist()
 
-# Filter for AMR genes
+# Filter for AMR genes -> insufficient AMR gene templates will not be considered for AMR linking
 fp_AMR_res = re.sub("\..am", ".res", args.AMR_bam)
 Filtered_AMR = pd.read_csv(fp_AMR_res, sep="\t")
-Filtered_AMR = Filtered_AMR[Filtered_AMR["Template_Identity"] >= args.pid_arg]["#Template"]
-Filtered_AMR = Filtered_AMR.tolist()
+Filtered_AMR = Filtered_AMR[Filtered_AMR["Template_Identity"] >= args.tid_arg]
+Filtered_AMR = Filtered_AMR[Filtered_AMR["Depth"] >= args.tdep_arg]
+Filtered_AMR = Filtered_AMR["#Template"].tolist()
 
 
 """
@@ -44,7 +54,7 @@ align1_n_lines = 0
 align1_reads = defaultdict(lambda: [str, 0, 0, 0])
 for read in align1:
     align1_n_lines += 1
-    # skip alignment if total template coverage was too low
+    # skip alignment if taxa template did not pass filter
     if read.reference_name not in Filtered_taxa:
         continue
     # store read identifiers
@@ -79,7 +89,8 @@ for read in align2:
     # alignment stats
     if read.reference_name == None: # not aligned to AMR --> skip
         continue
-    if read.reference_name not in Filtered_AMR: # KMA alignment to AMR gene template was not identical enough
+    # skip reads matching to template not passing AMR filter
+    if read.reference_name not in Filtered_AMR:
         continue
     else:
         Template2 = read.reference_name
@@ -87,7 +98,7 @@ for read in align2:
     cigarEQ = read.get_cigar_stats()[0][7] # EQ: exact sequence match (base in query matches base in template)
     Template2_l = align2_refseq.get(Template2, None)
     # matching bases/AMR length == Percentage Identity --> should also be filtered, !! currently does not consider reads that align to only part of the AMR
-    if 100*cigarEQ/Template2_l < args.pid_arg:
+    if 100*cigarEQ/Template2_l < args.tid_arg:
         continue
 
 

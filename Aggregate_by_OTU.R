@@ -72,7 +72,7 @@ group_by(Experiment) %>%
   summarize(p_bpTotal = sum(bpTotal, na.rm = TRUE)/unique(Total_bp),
             mean_queryID = weighted.mean(Query_Identity, bpTotal, na.rm=TRUE),
             mean_query_coverage = weighted.mean(Query_Coverage, bpTotal, na.rm=TRUE),
-            mean_templateID = weighted.mean(Template_Identity, Template_length, na.rm=TRUE),
+            mean_templateID = weighted.mean(Template_Identity, bpTotal, na.rm=TRUE),
             total_template_length = sum(Template_length, na.rm=TRUE),
             mean_template_length = mean(Template_length, na.rm=TRUE),
             mean_template_coverage = weighted.mean(Template_Coverage, bpTotal, na.rm=TRUE),
