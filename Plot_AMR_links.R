@@ -73,10 +73,7 @@ aggregate_by_OTU <- function(data){
               Template1_length=sum(Template1_length)/n(),
               Template2_length=sum(Template2_length)/n(),
               Organism_QID = n_match_bases1/Total_readlength,
-              ARG_TID = n_match_bases2/(Template2_length*n_reads),
-              AMR_links = case_when(
-                is.na(Organism_QID) ~  Total_readlength * ARG_TID,
-                TRUE ~ Total_readlength * Organism_QID * ARG_TID))
+              ARG_TID = n_match_bases2/(Template2_length*n_reads))
     return(data)
 }
 
@@ -114,6 +111,9 @@ if(taxlevel_species){
   data <- data %>%
     group_by(Species, ARG) %>%
     aggregate_by_OTU() %>%
+    mutate(AMR_links = case_when(
+                Species=="Unmapped" ~  Total_readlength * ARG_TID,
+                TRUE ~ Total_readlength * Organism_QID * ARG_TID)) %>%
     filter(AMR_links > 0)
   
   if(reference==""){
@@ -131,6 +131,9 @@ if(taxlevel_species){
   data <- data %>%
     group_by(Genus, ARG) %>%
     aggregate_by_OTU() %>%
+    mutate(AMR_links = case_when(
+                Genus=="Unmapped" ~  Total_readlength * ARG_TID,
+                TRUE ~ Total_readlength * Organism_QID * ARG_TID)) %>%
     filter(AMR_links > 0)
   
   if(reference==""){
