@@ -65,6 +65,8 @@ for read in align1:
     l = read.query_length
     cigarEQ = read.get_cigar_stats()[0][7]
     Template1_l = align1_refseq.get(Template1, None)
+    if 100*cigarEQ/l < args.tid_taxa or 100*cigarEQ/l < args.qid_taxa:
+        continue
 
     align1_reads[n] = [Template1, l, cigarEQ, Template1_l]
     
@@ -99,6 +101,8 @@ for read in align2:
     l = read.query_length
     cigarEQ = read.get_cigar_stats()[0][7] # EQ: exact sequence match (base in query matches base in template)
     Template2_l = align2_refseq.get(Template2, None)
+    if 100*(cigarEQ + read.get_cigar_stats()[0][8])/read.reference_length < args.tid_arg:
+        continue
 
     if n in align1_reads:
         Template1, Template1_readl, Template1_cigarEQ, Template1_l = align1_reads.pop(n) # pop matched reads from amr_reads: unmapped reads will remain
@@ -129,10 +133,7 @@ for temp1, temp2 in alignment_links.items():
     for template2, stats in temp2.items():
         if stats[0] < args.tdep_arg:
             continue
-        if stats[2]/stats[1] < args.tid_taxa:
-            continue
-        if stats[2]/stats[1] < args.qid_taxa:
-            continue
+        
         writer.writerow([temp1, template2] + stats)
 
 logging.info(f"Done")
