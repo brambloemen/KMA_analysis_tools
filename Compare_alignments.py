@@ -11,8 +11,8 @@ logging.basicConfig(level = logging.DEBUG,format='%(asctime)s %(message)s',
                     datefmt='%x %X')
 parser = argparse.ArgumentParser(description='Retrieve alignments from alignment file 1 in alignment file 2; \nPrint results to standard output')
 parser.add_argument("bam1", metavar="--input_1.bam", type=str, help="Filepath of bam alignment 1")
-# make fastq input optional
 parser.add_argument("bam2", metavar="--input_2.bam", type=str, help="Filepath of bam alignment 2")
+parser.add_argument("--threads", type=int, help="Number of threads used to process SAM/BAM file", default=1)
 args = parser.parse_args()
 
 
@@ -20,7 +20,7 @@ args = parser.parse_args()
 Loop over alignment 1
 """
 logging.info(f"Parsing alignment 1: {args.bam1}")
-align1 = pysam.AlignmentFile(args.bam1, "rb", threads=1)
+align1 = pysam.AlignmentFile(args.bam1, "rb", threads=args.threads)
 align1_refseq = {ref["SN"]:ref["LN"] for ref in align1.header.to_dict()["SQ"]}
 align1_n_lines = 0
 
@@ -29,8 +29,7 @@ align1_n_lines = 0
 align1_reads = defaultdict(lambda: [str, 0, 0, 0])
 for read in align1:
     # store read identifiers
-    n = re.search("read=\d+\sch=\d+",read.query_name).group()
-    n = re.sub("\D", "", n)
+    n = read.query_name
     Template1 = read.reference_name
     l = read.query_length
     cigarEQ = read.get_cigar_stats()[0][7]
@@ -48,14 +47,13 @@ Loop over alignment 2
 # summary dictionary. structure: {AMR gene: {Species: [#reads, total readlength, #exactly matched bases, readlength mapped to AMR, exactly matched bases to AMR, AMR template length]}}
 alignment_links = defaultdict(lambda: defaultdict(lambda: [0, 0, 0, 0, 0, 0]))
 logging.info(f"Parsing alignment 2: {args.bam2}")
-align2 = pysam.AlignmentFile(args.bam2, "rb", threads=1)
+align2 = pysam.AlignmentFile(args.bam2, "rb", threads=args.threads)
 align2_refseq = {ref["SN"]:ref["LN"] for ref in align2.header.to_dict()["SQ"]}
 align2_n_lines = 0
 
 for read in align2:
     # read identifiers
-    n = re.search("read=\d+\sch=\d+",read.query_name).group()
-    n = re.sub("\D", "", n)
+    n = read.query_name
     # alignment stats
     Template2 = read.reference_name
     l = read.query_length
@@ -74,12 +72,6 @@ for read in align2:
 
     align2_n_lines += 1
 logging.info(f"Done parsing alignment 2. Processed {align2_n_lines} alignments")
-
-# print results to file (no choice of filename)
-# Alignment_comparison = re.sub("\\..am", "", args.bam1) + f"_v_{align2}.tsv"
-# print(f"Filename: {Alignment_comparison}")
-# with open(Alignment_comparison, 'w') as csvfile:
-# paste here the code below, replace sys.stdout with filename
 
 # print results to standard output
 logging.info(f"Writing results to tsv")

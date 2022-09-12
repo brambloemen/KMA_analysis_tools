@@ -59,8 +59,7 @@ for read in align1:
     if read.reference_name not in Filtered_taxa:
         continue
     # store read identifiers
-    n = re.search("read=\d+\sch=\d+",read.query_name).group()
-    n = re.sub("\D", "", n)
+    n = read.query_name
     Template1 = read.reference_name
     l = read.query_length
     cigarEQ = read.get_cigar_stats()[0][7]
@@ -87,8 +86,7 @@ align2_n_lines = 0
 for read in align2:
     align2_n_lines += 1
     # read identifiers
-    n = re.search("read=\d+\sch=\d+",read.query_name).group()
-    n = re.sub("\D", "", n)
+    n = read.query_name
     # alignment stats
     # not aligned to AMR --> skip
     if read.reference_name == None: 
