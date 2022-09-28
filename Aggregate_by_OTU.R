@@ -63,12 +63,12 @@ clean_org_name <- function(organism){
   return(organism)
 }
 
-KMA$OTU <- clean_org_name(KMA$`# refSequence`)
+KMA$taxa <- clean_org_name(KMA$`# refSequence`)
 KMA <- KMA %>% 
 group_by(Experiment) %>%
   mutate(Total_bp = sum(bpTotal, na.rm = TRUE),
          Total_readCount = sum(readCount, na.rm = TRUE)) %>%
-  group_by(OTU, Experiment) %>%
+  group_by(taxa, Experiment) %>%
   summarize(p_bpTotal = sum(bpTotal, na.rm = TRUE)/unique(Total_bp),
             mean_queryID = weighted.mean(Query_Identity, bpTotal, na.rm=TRUE),
             mean_query_coverage = weighted.mean(Query_Coverage, bpTotal, na.rm=TRUE),
@@ -89,7 +89,7 @@ if(metadata!=""){
 }
 
 if(reference!=""){
-  KMA <- merge(KMA, ref_community, by.x="OTU", by.y = "Organism", all = TRUE)
+  KMA <- merge(KMA, ref_community, by.x="taxa", by.y = "Organism", all = TRUE)
 }
 
 output_file <- str_replace_all(filename, "\\.tsv", "_agg.tsv")

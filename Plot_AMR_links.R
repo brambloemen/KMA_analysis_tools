@@ -87,8 +87,9 @@ plot_links_byreads <- function(data, taxa){
       ggplot(aes(x=ARG, y={{taxa}})) +
       geom_point(aes(size=AMR_links)) +
       theme_classic() +
-      theme(axis.text.x = element_text(angle=90)) +
-      guides(color = guide_legend(override.aes = list(size = 8)))
+      theme(axis.text.x = element_text(angle=90, size=16),
+            axis.text.y = element_text(size=16)) +
+      guides(color = guide_legend(override.aes = list(size = 16)))
   return(plot)
 } 
 

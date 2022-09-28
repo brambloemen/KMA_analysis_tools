@@ -44,6 +44,11 @@ clean_ARG_names <- function(amr_gene){
   return(amr_gene)
 }
 
+#######################
+# plotting functions  #
+#######################
+
+
 
 ######################################
 # read in alignment comparison files
@@ -57,7 +62,9 @@ data <- mutate(data, Method=str_remove(filename, ".tsv")) %>% as.data.frame()
 # Direct comparison between two alignments
 ##########################################
 
-data <- mutate(data,
+if(taxlevel_species){
+
+  data <- mutate(data,
                Organism1 = clean_org_name(Template1),
                Organism1 = ifelse(is.na(Organism1), "Unmapped", Organism1),
                Organism2 = clean_org_name(Template2),
@@ -66,8 +73,6 @@ data <- mutate(data,
                Genus2 = str_extract(Organism2, "[:upper:]{1}[:lower:]+"),
                Agree = Organism1 == Organism2)
 
-
-if(taxlevel_species){
   data <- data %>%
     group_by(Organism1, Organism2, Agree) %>%
     select(names(data[sapply(data, is.numeric)]))
@@ -95,6 +100,15 @@ if(taxlevel_species){
   }
   
 } else if(taxlevel_genus){
+  data <- mutate(data,
+               Organism1 = clean_org_name(Template1),
+               Organism1 = ifelse(is.na(Organism1), "Unmapped", Organism1),
+               Organism2 = clean_org_name(Template2),
+               Organism2 = ifelse(is.na(Organism2), "Unmapped", Organism2),
+               Genus1 = str_extract(Organism1, "[:upper:]{1}[:lower:]+"),
+               Genus2 = str_extract(Organism2, "[:upper:]{1}[:lower:]+"),
+               Agree = Genus1 == Genus2)
+
   data <- data %>%
     group_by(Genus1, Genus2, Agree) %>%
     select(names(data[sapply(data, is.numeric)]))
